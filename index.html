@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Banco ASDF</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/jquery-ui.css">
+        <link rel="stylesheet" href="css/jquery.mobile-1.4.5.min.css">
+        <script type="text/javascript" src="js/jquery-ui.js"></script>
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+        <script type="text/javascript" src="js/jquery.mobile-1.4.5.min.js"></script> 
+    <script type="text/javascript">
+            $(document).on("pageinit", "#paginaMapa", function(e, data){
+   // $(document).ready(function(){
+     //   document.addEventListener("deviceready", onDeviceReady, false);
+        //function onDeviceReady(){
+            var defaultPos=new google.maps.LatLng(19.462876, -97.689435);
+            if(navigator.geolocation){
+                function exito(posicion){                   
+                    MuestraMapa(new google.maps.LatLng(posicion.coords.latitude, posicion.coords.longitude));
+                }
+                function falla(error){
+                    alert("Error en el servicio de geolocalizacion" );
+                    MuestraMapa(defaultPos);
+                }
+                var opciones={maximumAge:500000, enableHighAccuracy: true, timeout: 5000};
+                navigator.geolocation.getCurrentPosition(exito,falla, opciones);
+            }else{
+                MuestraMapa(defaultPos);
+            }
+        
+        function MuestraMapa(latlng){
+             //alert("listo:"+latlng);
+        var miOptions={
+            zoom:16,
+            center: latlng,
+            disableDefaultUI: true,
+            mapTypeId: google.maps.MapTypeId.ROADMAP};
+        
+        var map=new google.maps.Map(document.getElementById("map-canvas"), miOptions);
+        var infoVentanta=new google.maps.InfoWindow({
+          position: latlng,
+          content:" <p>Tu posicion actual es: </p> "+ latlng
+      });
+      var marca=new google.maps.Marker({
+        position: latlng,
+        map:map,
+        title:"Mi posicion",
+        animation:google.maps.Animation.DROP
+      });
+      google.maps.event.addListener(marca, "click", function(){infoVentanta.open(map,marca);} );
+  }
+    });
+    $(document).ready(function(){
+	document.addEventListener("deviceready", function(){
+		$('#TomarFoto').tap(function(){
+                    alert();
+			navigator.device.capture.captureImage(function(mediaFiles){
+			path = mediaFiles[0].fullPath;
+			$('#Foto').append('<br><img src="'+path+'" width="100%" />').attr('rel',path);
+			},function(error){
+			navigator.notification.alert('Error code: ' + error.code, null, 'Capture Error');
+			},{limit:1});
+		});
+	}, false);
+});
+
+        $(document).ready(function inicio(){
+            
+            var btnGuardar=$("#btnregistrar");
+            btnGuardar.click(function guardarInf(){
+                var Nombre=$("#nombre").val();
+                var Apellidos=$("#apellidos").val();
+                var N_Cuenta=$("#N_cuenta").val();
+                var Saldo=$("#saldo").val();
+                $.ajax({
+                    type:"POST",
+                    url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/registrar.php",
+                    data:"nom="+Nombre+"&ape="+Apellidos+"&nCu="+N_Cuenta+"&sal="+Saldo,
+                    success: respuestaServ
+                    });      
+                function respuestaServ(datos){
+                alert(datos);
+                }
+                });
+            
+            var btnCuenta=$("#btnCuenta");
+            btnCuenta.click(function operacion(){
+                var N_Cuenta=$("#cuCliente").val();
+                $.ajax({
+                    type:"POST",
+                    url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/operacion.php",
+                    data:"nCu="+N_Cuenta,
+                    success: resSaldo
+                });
+                function resSaldo(datos){
+                    var dat=$.parseJSON(datos);
+                    var divRes=$("#saldoCuenta");
+                    divRes.html("");
+                    divRes.append("<center><table border= '1' id='tab'><tr><th>Nombre</th><th>Apellidos</th><th>Número de Cuental</th><th>Saldo</th></tr>");
+                    var tabla=$("#tab");
+                    for(var i in dat){
+                        tabla.append("\
+                            <tr><td>"+dat[i].Nombre+"</td>"
+                            +"<td>"+dat[i].Apellidos+"</td>"
+                            +"<td>"+dat[i].N_Cuenta+"</td>"
+                            +"<td>"+dat[i].Saldo+"</td></tr>"
+                            );
+                    }
+                    tabla.append("</table></center>");
+                    
+                    var divMov=$("#divMov");
+                    divMov.html("");
+                    divMov.append("<label for='txtdeposito'>Saldo actual</label> <input type='text' id='txtsaldo' disabled='true'/>");
+                    divMov.append("<label for='txtdeposito'>Cantidad</label> <input type='text' id='txtcantidad' placeholder='Cantidad'/>");
+                    $("#txtsaldo").val(dat[i].Saldo);
+                }
+            });
+            
+            var btnDeposito=$("#btnMovimiento");
+            btnDeposito.click(function movimiento(){
+               
+                var x =parseInt($("#txtsaldo").val());
+                var saldo=parseInt($("#txtcantidad").val());
+                var suma=x+saldo;
+               var nCu=$("#cuCliente").val();
+               $.ajax({
+                  type:"POST",
+                  url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/movimiento.php",
+                  data:"sal="+suma+"&nCu="+nCu,
+                  success: resDep
+               });
+               function resDep(datos){
+                   alert(datos);
+               }
+            });
+            
+            var btnRetiro=$("#btnMovimientoR");
+            btnRetiro.click(function movimiento2(){
+               
+                var x =parseInt($("#txtsaldo").val());
+                var saldo=parseInt($("#txtcantidad").val());
+                
+                if(saldo<=x){
+                    var suma=x-saldo;
+                    var nCu=$("#cuCliente").val();
+                    $.ajax({
+                    type:"POST",
+                    url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/movimiento.php",
+                    data:"sal="+suma+"&nCu="+nCu,
+                    success: resDep
+               });
+                    function resDep(datos){
+                    alert(datos);
+               }
+               }
+               else{
+                   alert("La cantidad a retirar es mayor que el saldo disponible");
+               }
+               
+
+            });
+            
+            var mostrar =$("#mostrar");
+            mostrar.click(function ver(){
+               $.ajax({
+                  type:"POST",
+                  url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/mostrar.php",
+                  data:"",
+                  success: resMos
+               }); 
+               function resMos(datos){
+                   var dat=$.parseJSON(datos);
+                    var divRes=$("#divMos");
+                    divRes.html("");
+                    divRes.append("<center><table border= '1' id='tab2'><tr><th>Nombre</th><th>Apellidos</th><th>Número de Cuental</th><th>Saldo</th></tr>");
+                    var tabla=$("#tab2");
+                    for(var i in dat){
+                        tabla.append("\
+                            <tr><td>"+dat[i].Nombre+"</td>"
+                            +"<td>"+dat[i].Apellidos+"</td>"
+                            +"<td>"+dat[i].N_Cuenta+"</td>"
+                            +"<td>"+dat[i].Saldo+"</td></tr>"
+                            );
+                    }
+                    tabla.append("</table></center>");
+               }
+            });
+            
+            var btnActualizar=$("#btnActualizar");
+            btnActualizar.click(function cargaDatos(){
+               var idActualizar=$("#idActualizar").val();
+              $.ajax({
+                 type:"POST",
+                 url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/modificar.php",
+                 data:"id="+idActualizar,
+                 success:resAct
+              });
+                  function resAct(datos){
+                    var dat=$.parseJSON(datos);
+                    var divRes=$("#divCam");
+                    divRes.html("");
+                    divRes.append("<label for='nomReg'>Nombre</label><input type='text' id='nomReg'>"+
+                           "<label for='nomApp'>Apellidos</label><input type='text' id='nomApp'>"+
+                           "<label for='nCu'>Número de Cuenta</label><input type='text' id='nCu' disabled = 'true' >"+
+                           "<label for='sal'>Saldo</label><input type='text' id='sal' disabled = 'true' >");
+                   var i=0;
+                    $("#nomReg").val(dat[i].Nombre);
+                    $("#nomApp").val(dat[i].Apellidos);
+                    $("#nCu").val(dat[i].N_Cuenta);
+                    $("#sal").val(dat[i].Saldo);
+
+                    }
+            });
+            var btnModificar=$("#btnModificar");
+            btnModificar.click(function guardarAct(){
+                var nombre=$("#nomReg").val();
+                var apellido=$("#nomApp").val();
+                var nCuenta=parseInt($("#nCu").val());
+//                var saldo=$("#sal").val();
+                 $.ajax({
+                    type:"POST",
+                    url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/actualizar.php",
+                    data:"nom="+nombre+"&ape="+apellido+"&nCu="+nCuenta,
+                    success: respGuardarAct
+                    });      
+	  
+                function respGuardarAct(datos){
+                    alert(datos);
+                }	  
+            });
+            
+            var btnEliminar=$("#btnEliminar");
+            btnEliminar.click(function eliminar(){
+               var nCuenta=parseInt($("#nCu").val());
+               $.ajax({
+                   type:"POST",
+                   url:"http://itslmoviles.260mb.net/JoseAlejandroLealGonzalez/eliminar.php",
+                   data:"nCu="+nCuenta,
+                   success: resEliminar
+               });
+               function resEliminar(datos){
+                   alert(datos);
+               }
+            });
+        });
+    </script>
+        <style>
+    p{
+    text-align:center;
+    }
+    label{
+        color: blue;
+    }
+    a{
+        color: orange;
+    }
+    #map-canvas{
+    height: 100%;
+    width: 100%;
+    padding: 8px;
+    position: absolute;
+    top: 40px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    
+    }
+    </style>
+    </head>
+    <body>
+            <div data-role="page" id="Principal">
+      <div data-role="header">
+	<h1>Menu</h1>
+      </div>
+      <div data-role="content" >  
+	  <ul data-role="listview">
+	    <li><a href="#foto">Fotografia</a></li>
+	    <li><a href="#paginaMapa">Localizacion</a></li>
+	    <li><a href="#menu">Registros</a></li>
+	  </ul>
+      </div>
+        <div data-role="footer">
+            <h1>Derechos Reservados</h1>
+        </div>
+    </div>
+    
+    <div data-role="page" id="paginaMapa" data-url="map-page">
+        <div data-role="header">
+            <h1> Tu posicion actual</h1>
+        </div>
+        <div data-role="content">
+            <div id="map-canvas"></div>
+        </div>
+        <div data-role="footer">
+            <a style="color: orange" data-role="button" data-transition="pop" href="#Principal">Regresar</a>
+          <p>Derechos reservados</p>
+        </div>
+    </div>
+    
+    <div data-role="page" id="foto">
+  <div data-role="header">
+    <p>Manejo de camara</p>
+  </div>
+  <div data-role="content">
+    <input type="button" id="TomarFoto" value="Tomar Foto">
+    <div id="Foto"></div>
+  </div>
+    <div data-role="footer">
+        <a style="color: orange" data-role="button" data-transition="pop" href="#Principal">Regresar</a>
+      <p>Derechos reservados</p>
+    </div>
+</div>
+        
+        <div data-role="page" id="menu" data-theme="b">
+            <div data-role="header">
+              <p>Menu</p>
+            </div>
+            <div data-role="content">
+                <ul data-role="listview" data-theme="a">
+                    <li><a data-transition="flip" href="#registrar">REGISTRAR CLIENTE</a></li>
+                    <li><a data-transition="flip" href="#cuenta">SALDO</a></li>
+                    <li><a data-transition="flip" href="#consultar">CONSULTAR</a></li>
+                </ul>
+            </div>
+            <div data-role="footer">
+                <a style="color: orange" data-role="button" data-transition="pop" href="#Principal">Regresar</a>
+              <p>Derechos reservados</p>
+            </div>
+        </div>
+        
+        <div data-role="page" id="registrar" data-theme="b">
+            <div data-role="header">
+                <p>REGISTAR CLIENTE</p>
+            </div>
+            <div data-role="content">
+                <label for="Nombre">Nombre:</label>
+                <input type="text" id="nombre" placeholder="Nombre del cliente:" data-theme="a"/>
+                <label for="Apellidos">Apellidos:</label>
+                <input type="text" id="apellidos" placeholder="Apellidos del cliente:" data-theme="a"/>
+                <label for="N_Cuenta">Número de cuenta:</label>
+                <input type="text" id="N_cuenta" placeholder="Número de cuenta para el cliente:" data-theme="a"/>
+                <label for="Saldo">Saldo inicial:</label>
+                <input type="text" id="saldo" placeholder="Saldo inicial" data-theme="a"/>
+                <input style="background: blue"  type="button" id="btnregistrar" value="Guardar registro"/>
+            </div>
+            <div data-role="footer">
+                <a style="color: orange" data-role="button" data-transition="pop" href="#menu">Regresar</a>
+              <p>Derechos reservados</p>
+            </div>
+        </div>
+        
+        <div data-role="page" id="cuenta" data-theme="b">
+            <div data-role="header">
+                <p>GESTIÓN DE SALDO EN CUENTA</p>
+            </div>
+            <div data-role="content">
+                <label for="cuCliente">Número de cuenta:</label>
+                <input data-theme="a" type="text" id="cuCliente" placeholder="Número de cuenta del cliente:"/>
+                <input style="background: blue" type="button" id="btnCuenta" value="Consultar"/>
+                <div id="saldoCuenta">
+
+                </div>
+                <div id="divMov">
+                    
+                </div>
+            </div>
+            <div data-role="footer">
+                <a style="color: orange" data-role="button" data-transition="pop" href="#menu">Regresar</a>
+                <input style="background: aqua" type='button' id='btnMovimiento' value='Depositar'/>
+                <input style="background: aqua" type='button' id='btnMovimientoR' value='Retirar'/>
+              <p>Derechos reservados</p>
+            </div>
+        </div>
+        
+        <div data-role="page" id="consultar" data-theme="b">
+            <div data-role="header">
+                <p>CLIENTES REGISTRADOS</p>
+            </div>
+            <div data-role="content">
+                <input type="button" id="mostrar" value="Mostrar clientes"/>
+                <div id="divMos">
+             
+                </div>
+                <label for="idActualizar">Número de cuenta:</label>
+                <input type="text" id="idActualizar"/>
+                <input style="background: lime" type="button" id="btnActualizar" value="Datos del cliente"/>
+                <div id="divCam">
+                    
+                </div>
+                <input style="background: blue" type="button" id="btnModificar" value="Guardar"/>
+                <input style="background: red" type="button" id="btnEliminar" value="Eliminar cliente"/>
+            </div>
+            <div data-role="footer">
+                <a style="color: orange" data-role="button" data-transition="pop" href="#menu">Regresar</a>
+              <p>Derechos reservados</p>
+            </div>
+        </div>
+    </body>
+</html>
